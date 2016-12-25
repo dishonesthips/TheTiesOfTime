@@ -1,0 +1,434 @@
+/**************************************************************************************************************
+  * Assignment: ICS Summative
+  * Description of game: This program is a sidescrolling platformer game with a menu system in which the goal 
+  *                      is to acquire keys to unlock briefcases to win the levels. The final level is a phrase
+  *                      unscrambling puzzle
+  * Description of class: This class is the final level of the game, and is the unscrambling puzzle in which
+  *                       the user must use their keyboard to type out a secret message
+  * Author of Class: #Akeen Zhong
+  * Last Edited: June. 12, 2016
+  * Course: ICS3U1
+  ***************************************************************************************************************/
+
+//Import required packages
+package WordPuzzle;
+
+import javax.swing.JPanel;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
+import javax.swing.*;
+import javax.imageio.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
+import java.util.ArrayList;
+
+public class WordPuzzle
+{
+  //#Variable
+  /*******************************************************************************************************************
+    * Variable Dictionary
+    * String[]puzzles - A string array that contains the puzzles; one of them are randomly chosen upon selecting the
+    *                   level. A period is present in each to indicate a new line to the drawn sticky notes
+    * int puzzleChoice - Contains a random value that correlates with the indexes of the puzzles[] array, chooses a
+    *                    random puzzle
+    * String[]letters - Contains the string that the user has to match in order to win the game, and also draws its
+    *                   characters onto the clock balls
+    * int[]bounceX - Holds the X coordinates of the bouncing clock balls
+    * int[]bounceY - Holds the Y coordinates of the bouncing clock balls
+    * int[]dirX - Holds the speed and direction which moves the ball left and right
+    * int[]dirY - Holds the speed and direction which moves the ball up and down
+    * int[]noteX - Holds the X coordinates of the sticky notes drawn
+    * int[]noteY - Holds the Y coordinates of the sticky notes drawn
+    * 
+    * BufferedImage backGround - This is the bulletin board used for the word puzzle, it is blank unlike the other
+    *                            boards with embeded images
+    * BufferedImage fillBox - This contains the sticky note which acts as a box for the user to enter their input
+    * BufferedImage fillBoxInv - This is the inverted sticky note used every other note for aesthetic quality
+    * BufferedImage clockBall - These clocks contain a character indicating the letter options and they bounce between
+    *                           the boundaries of the bulletin board
+    * BufferedImage victSpace - This contains one of the victory images - Space themed
+    * BufferedImage victIJ - This contains one of the victory images - Iwo Jima themed
+    * BufferedImage victJFK - This contains one of the victory images - JFK themed
+    * BufferedImage victDream - This contains one of the victory Images - Dream themed
+    * char inputLetter - Detects the user input if it is a letter and correlates it with the keycode "k"
+    * char inputLetter - Detects the user input if it is a number and correlates it with the keycode "k"
+    * String removeLetter - the character varaibles above are cast into this string
+    * String timeSave - This represents the user's input and is concatenated whenever they enter a valid letter, if
+    *                   they get the answer right, they have saved time
+    * int boxFlipper - This represents a value that counts how many sticky notes are outputted. However, the main use
+    *                  of this integer is to invert the sticky notes every other time they are drawn
+    * int horizontal1 - This marks the horizontal position of the sticky notes drawn on the first line on the screen
+    * int horizontal2 - This marks the horizontal position of the sticky notes drawn on the second line on the screen
+    * int vertical1 - This marks the vertical postion of the sticky notes drawn on the first line on the screen
+    * int vertical2 - This marks the vertical postion of the sticky notes drawn on the second line on the screen
+    * int counter - This integer is used so an array can be used to contain the horizontal and vertical values. A for
+    *               loop cannot be used because all the values are changed when a space is detected, but that cannot
+    *               be added to the array
+    * ArrayList usedIndex - Holds an !!ArrayList!! that is added to every time input is valid, and the value added
+    *                       represents a certain index in the string found in letters. Without this duplicate values
+    *                       cannot be filled in because all their values will have been added in a regular array
+    * int letterCount - This is used with the indexes of the horizontal and vertical values to ensure that the user's
+    *                   guess moves to the first blank sticky note
+    * int victOption - This contains a random value that chooses a random victory screen to display during a win
+    * int fontSize - Integer that contains the font size of the strings that are drawn
+    * boolean entry - Is a boolean that turns true when the user presses the keyboard and turns false after the user
+    *                 inputs a valid response; ensures that letters have to entered one at a time
+    * boolean removeIndex - Boolean that turns true when a valid response is given and when it is true, the appropriate 
+    *                       ball is frozen at an empty sticky note
+    * boolean restart - Boolean that turns true when the use hits backspace and restarts the level
+    * boolean cheat - Turns true if cheats are turned on in the level selection
+    * boolean win - Turns true if the user input matches the puzzle given
+    * boolean finish - Turns true after a delay when win is true
+    ******************************************************************************************************************/
+  
+  //Declare variables
+  
+  //#Array
+  private String[]puzzles =
+  {
+    "Give us 100.percent",
+    "100 percent.or bust",
+    "Mark this.as perfect"
+  };
+  
+  //#Random, finds the index position of a random puzzle to load
+  int puzzleChoice = (int) (Math.random() * (puzzles.length));
+  
+  private String[]letters = 
+  {
+    "GIVEUS100PERCENT",
+    "100PERCENTORBUST",
+    "MARKTHISASPERFECT"
+  };
+  
+  private int[]bounceX = new int[letters[puzzleChoice].length()];
+  private int[]bounceY = new int[letters[puzzleChoice].length()];
+  
+  private int[]dirX = new int[letters[puzzleChoice].length()];
+  private int[]dirY = new int[letters[puzzleChoice].length()];
+  
+  private int[]noteX = new int[letters[puzzleChoice].length()];
+  private int[]noteY = new int[letters[puzzleChoice].length()];
+  
+  ArrayList <Integer> usedIndex = new ArrayList <Integer>();
+  
+  
+  private BufferedImage backGround;
+  private BufferedImage fillBox;
+  private BufferedImage fillBoxInv;
+  private BufferedImage clockBall;
+  
+  private BufferedImage victSpace;
+  private BufferedImage victIJ;
+  private BufferedImage victJFK;
+  private BufferedImage victDream;
+  
+  char inputLetter;
+  char inputNum;
+  
+  String removeLetter;
+  String timeSave;
+  
+  int boxFlipper;
+  int horizontal1;
+  int horizontal2;
+  int vertical1;
+  int vertical2;
+  int counter;
+  int letterCount;
+  int victOption;
+  int fontSize;
+  
+  boolean entry;
+  boolean removeIndex;
+  boolean restart;
+  boolean cheat;
+  boolean win, finish;
+  
+  //#Method
+  private void initialize() //This method declares variables or resets them if the boolean "restart" is true
+  {
+    removeLetter=".";
+    timeSave="";
+    letterCount=-1;
+    
+    //#Loop that declares the values for the bouncing balls
+    for(int i = 0; i < bounceX.length; i++)
+    {
+      //#Random values that are given to the ball
+      bounceX[i]= (int) (Math.random()* 803) + 40;
+      bounceY[i]= (int) (Math.random() * 143) + 48;
+      //The bounce values are in a range so that the ball stays in its bouncing boundaries
+      dirX[i] = (int) (Math.random()* 13) -6;
+      dirY[i] = (int) (Math.random()* 13) -6;
+      //The direction values are in a range so that balls move at different speeds
+      if(dirX[i]==0)
+        dirX[i]=1;
+      if(dirY[i]==0)
+        dirY[i]=1;
+      //Sometimes the value will be 0 in which the ball will cease to move, override them by setting them to 1
+    }//End for loop
+    
+    victOption = (int) ((Math.random())*4); //#Random value that chooses a victory screen
+    usedIndex.clear(); //Clear the ArrayList
+    restart = false; //Redeclare array as false
+  } //End method
+  
+  //#Method
+  private void loadImage()
+  {
+    try //Try to load the images
+    {
+      backGround =  ImageIO.read(getClass().getResource("bulletinBoard.png"));
+      fillBox =  ImageIO.read(getClass().getResource("stickyNote.png"));
+      fillBoxInv =  ImageIO.read(getClass().getResource("stickyNote.png"));
+      
+      //Invert the sticky note for fillBoxInv
+      AffineTransform tx = AffineTransform.getScaleInstance(-1, 1); 
+      tx.translate(-fillBox.getWidth(null),0); 
+      AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_NEAREST_NEIGHBOR); 
+      fillBoxInv = op.filter(fillBox, null);
+      
+      clockBall = ImageIO.read(getClass().getResource("clockBall.png"));
+      
+      victSpace = ImageIO.read(getClass().getResource("spaceVictory.png"));
+      victIJ = ImageIO.read(getClass().getResource("ijVictory.png")); 
+      victJFK = ImageIO.read(getClass().getResource("jfkVictory.png"));
+      victDream = ImageIO.read(getClass().getResource("dreamVictory.png"));
+    }
+    //#Error
+    catch (Exception e){e.printStackTrace(); //Print out error message if failed
+    } 
+  }//End method
+  
+  
+  public WordPuzzle()//(GameStateManager manage) //Communicates with the GameStateManager
+  {
+    //this.manage = manage;
+    this.cheat = cheat;
+    initialize(); //Declare variables in the initialize method
+    loadImage(); //Load the images
+  }
+  
+  public void tick() //Timer method
+  {
+    if (finish)
+    {
+      //back to menu
+    }
+      if(win)
+      {
+        try
+      {
+        Thread.sleep(500);
+      } catch (Exception e) {}
+      finish = true;
+      }
+      
+  }
+  //Graphics method
+  public void draw(Graphics g)
+  {
+    g.drawImage(backGround,0,0,null); //Draws the bulletin board
+    
+    fontSize = 20;
+    g.setFont(new Font("Courier", Font.PLAIN, fontSize)); //Sets the font at a size of 20
+    g.drawString("Press backspace to restart",300,150); //Draws the string to help the user in case they mess up
+    
+    //Declare intial variables for horizontal and vertical values, as well as the counter
+    
+    //#Error - need to redeclare otherwise notes are drawn past the screen
+    horizontal1 = 50; 
+    vertical1 = 260;
+    horizontal2 = 50; 
+    vertical2 = 340;
+    counter = 0;
+    
+    fontSize = 60;
+    g.setFont(new Font("Courier", Font.PLAIN, fontSize)); //Sets the font at a size of 20
+    
+    //#Loop that draws the sticky  notes
+    for(int i =0; i < puzzles[puzzleChoice].length(); i++)
+    {
+      //#Condition, as long as the index position in the string is not a space
+      if(puzzles[puzzleChoice].charAt(i)!=' ')
+      {
+        //#Condition, as long as the index position in the string is before the period (first line)
+        if(i< puzzles[puzzleChoice].indexOf('.'))
+        {
+          //Draw a normal note
+          if (i%2 == 0)
+            g.drawImage(fillBox,horizontal1,vertical1,null);
+          //Draw an inverted note every two notes
+          else
+            g.drawImage(fillBoxInv,horizontal1,vertical1,null);
+          
+          noteX[counter]=horizontal1;
+          noteY[counter]=vertical1;
+          horizontal1+=75;
+          //Add the coordinates to the noteX and noteY arrays, and add to the horizontal1 value for the next note
+        }//End if
+        //#Condition, if the index position in the string is after the period (second line)
+        else if(i> puzzles[puzzleChoice].indexOf('.'))
+        {
+          //Draw a normal note
+          if (i%2 == 0)
+            g.drawImage(fillBox,horizontal2,vertical2,null);
+          //Draw an inverted note every two notes
+          else
+            g.drawImage(fillBoxInv,horizontal2,vertical2,null);
+          
+          noteX[counter]=horizontal2;
+          noteY[counter]=vertical2;
+          horizontal2+=75;
+          //Add the coordinates to the noteX and noteY arrays, and add to the horizontal2 value for the next note
+        }//End else if
+        else //If the index is on the position of the period
+          counter--; ////#Error ensure that this index is not added to the noteX and noteY arrays
+      }//End if
+      else //If there is a space in the index position
+      {
+        if(i< puzzles[puzzleChoice].indexOf('.')) //Add a space in the first line if it is before the period
+          horizontal1+=75;
+        else if(i> puzzles[puzzleChoice].indexOf('.')) //Add as space in the second line if it is after the period
+          horizontal2+=75;
+        counter--; //Ensure that this index is not added to the noteX and noteY arrays
+      }//End else
+      counter++; //Advance the counter so that the coordinates to not overlap each other
+    }//End for loop
+    
+    //#Error - The counter has to be added and subtracted to so the index is not out of range
+    
+    //#Condition
+    if(restart)
+      initialize(); //Redeclare the variables
+    
+    //#Loop
+    //Loop goes through every single ball, and does various tasks 
+    for(int ballCount = 0; ballCount<letters[puzzleChoice].length(); ballCount++)
+    {
+      //If the user enters a valid option and the letter has not been used before #Condition
+      if (removeLetter.equals(letters[puzzleChoice].substring(ballCount,ballCount+1)) 
+            && !usedIndex.contains(ballCount) && entry)
+      {
+        //Set removeIndex to true so the ball will freeze
+        removeIndex = true;
+        usedIndex.add(ballCount);
+        //Add to index to ballCount to interact with duplicates
+        letterCount++;
+        //Add to letterCount so it lines up with the notes
+        timeSave+=removeLetter;
+        //Add to the timeSave string
+        entry = false;
+        //Wait for a new user entry
+      }
+      //Change the direction of the balls around if the are about to be out of bounds #Arrays
+      if (bounceX[ballCount]<40 || bounceX[ballCount]>=842) //Left and right boundaries
+        dirX[ballCount]*=-1;
+      if (bounceY[ballCount]<48 || bounceY[ballCount]>=(190)) //Up and down boundaries
+        dirY[ballCount]*=-1;
+      
+      //Move the balls #Arrays
+      bounceX[ballCount]+=dirX[ballCount];
+      bounceY[ballCount]+=dirY[ballCount];
+      
+      //#Condition, which applies if the user enters a valid entry
+      if(removeIndex)
+      {
+        //Cease movement of the balls #Arrays
+        dirX[ballCount]=0; 
+        dirY[ballCount]=0;
+        {
+          //Display the clock ball at the next open note #Arrays
+          bounceX[ballCount] = noteX[letterCount];
+          bounceY[ballCount] = noteY[letterCount];
+        }
+        removeIndex = false; //Leave the other balls untouched 
+      }
+      //Draw clock balls and the letters inside of the ball #Arrays
+      g.drawImage(clockBall,bounceX[ballCount],bounceY[ballCount],null);
+      g.drawString(letters[puzzleChoice].substring(ballCount,ballCount+1),bounceX[ballCount]+18,bounceY[ballCount]+50);
+      
+    }
+    if (timeSave.equals(letters[puzzleChoice]))
+      win = true;
+    //If the user input matches the puzzle solution #Condition
+    if(finish)
+    {
+
+      //Draw the images depending on the random number made
+      switch(victOption) //Switch statement
+      {
+        
+        case 0:
+        {
+          g.drawImage(victSpace,0,0,null);
+          break;
+        }
+        case 1:
+        {
+          g.drawImage(victIJ,0,0,null);
+          break;
+        }
+        case 2:
+        {
+          g.drawImage(victJFK,0,0,null);
+          break;
+        }
+        case 3:
+        {
+          g.drawImage(victDream,0,0,null);
+          break;
+        }
+        
+      }//end switch statement
+      
+    }
+    /*
+     if(cheat)
+     {
+     fontSize = 20;
+     g.setFont(new Font("Courier", Font.PLAIN, fontSize));
+     g.drawString(puzzles[puzzleChoice],300,200);
+     }
+     */
+  }  
+  public void keyPressed(int k) 
+  {
+  }
+  
+  //Check for key presses
+  public void keyReleased(int k) 
+  {
+    //#Condition
+     if(k == 27) //Escape key
+      System.out.println("send to main menu"); //Sends the user to the main menu
+    
+    //If it is a letter entered
+    if (k>=65 && k<=90)
+    {
+      //Add 32 to the keycode to get the character
+      inputLetter = (char)(k+32);
+      removeLetter = Character.toString(inputLetter).toUpperCase(); //Change it into a string
+      entry = true; //Add an entry
+      
+    }
+    //If a number is entered #Condition
+    else if (k>=48 && k<=57)
+    {
+      inputNum = (char) k; //The key code matches the ASCII code
+      removeLetter = Character.toString(inputNum); //Change it into a string
+      entry = true; //Add an entry
+    }//end else if
+    else if (k==8) //Backspace is hit
+    { 
+      restart = true; //Reinitialize the program
+    }//end else if
+  }//end keyReleased
+  
+  public void keyTyped(int k)
+  {
+    //unicode
+  }
+}

@@ -1,0 +1,461 @@
+package game;
+
+import javax.swing.JPanel;
+import javax.imageio.*;
+import java.awt.image.*;
+import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import javax.swing.ImageIcon;
+import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
+
+public class Louis
+{
+  private static boolean left, right, crouch, inAir, isDead, displayRed, hasWon, faceRight;
+  private static boolean isDeadScreen, hasWonScreen, cheat;
+  private String preface;
+  public static int mapX;
+  private static int mapStart;
+  private static int louisY;
+  private static int hSpeed = 0, ySpeed = 0;
+  
+  //movement constants
+  public static int acceleration = 2, friction = 1, gravForce = 1;
+  private static int maxHSpeed = 8, minHSpeed = -8;
+  private static int minYSpeed = -16, maxYSpeed = 30;
+  
+  //rectangles to be used for collision intersections
+  public static Rectangle hitBoxY, hitBoxX, checkCollide, currentState;
+  
+  //images relating to this class
+  private BufferedImage standL,   standR, 
+    jumpL,     jumpR, 
+    crouchL, crouchR, 
+    runL1,     runR1, 
+    runL2,     runR2, 
+    winScreen, deathScreen,
+    dead, 
+    toDisplay;
+  
+  
+  
+  public Louis(boolean cheat)
+  {
+    this.cheat = cheat;
+    loadImages(Gameplay.level);
+    init(Gameplay.level);
+  }
+  
+  //horizontal movement methods
+  public void moveL()
+  {
+    hSpeed += acceleration;
+    if (hSpeed > maxHSpeed)
+      hSpeed = maxHSpeed;
+  }
+  public void moveR()
+  {
+    hSpeed -= acceleration;
+    if (hSpeed < minHSpeed)
+      hSpeed = minHSpeed;
+  }
+  public void friction()
+  {
+    if (hSpeed > 0) 
+    {
+      hSpeed -= friction;
+      //if (hSpeed < 0)
+      //hSpeed = 0;
+    }
+    else if (hSpeed < 0) 
+    {
+      hSpeed += friction;
+      //if(hSpeed > 0)
+      //hSpeed = 0;
+    }
+  }
+  
+  //vertical movement methods
+  public void jump()
+  {
+    ySpeed = minYSpeed;
+  }
+  public void gravity()
+  {
+    if (ySpeed >= maxYSpeed)
+      ySpeed = maxYSpeed;
+    else
+      ySpeed += gravForce;
+    inAir = true;
+  }
+  
+  public void checkCol()
+  {
+    //checking collision using rectangle intersection
+    hitBoxY = new Rectangle(Board.WIDTH / 2 - 16, louisY + ySpeed, 32, 32);
+    hitBoxX = new Rectangle(Board.WIDTH / 2 - 16 - hSpeed, louisY, 32,32);
+    for (int i = 0; i < Gameplay.map.length; i++)
+    {
+      for (int j = Gameplay.markCollision - 1; j < Gameplay.markCollision + 2; j++)
+      {
+        if (Gameplay.map[i][j] == 1 || Gameplay.map[i][j] == 2)
+        {
+          
+          checkCollide = new Rectangle(mapX + j * 48, i * 48 - 48, 48, 48);          
+          if (hitBoxX.intersects(checkCollide))
+          {
+            if (hSpeed < 0)//approaching block from left
+              mapX -= (mapX + j * 48) - (Board.WIDTH / 2 - 16 + 32);
+            else if (hSpeed > 0)//approaching block from right
+              mapX += (Board.WIDTH / 2 - 16) - (mapX + j * 48 + 48);            
+            hSpeed = 0;
+          }
+          if (hitBoxY.intersects(checkCollide))
+          {
+            if (ySpeed < 0)
+              louisY = i * 48;
+            else if (ySpeed > 0)
+            {
+              inAir = false;
+              louisY = i * 48 - 32 - 48;
+            }
+            ySpeed = 0;
+          }
+        }
+      }
+    }
+  }
+  
+  public void checkDeath()
+  {
+    currentState = new Rectangle(Board.WIDTH / 2 - 16, louisY, 32, 32);
+    //collision with spikes
+    for (int i = 0; i < Gameplay.map.length; i++)
+    {
+      for (int j = Gameplay.markCollision - 1; j < Gameplay.markCollision + 2; j++)
+      {
+        if (Gameplay.map[i][j] == 3 || Gameplay.map[i][j] == 4)
+        {
+          checkCollide = new Rectangle(mapX + j * 48, i * 48 - 48, 48, 48);
+          if (currentState.intersects(checkCollide) || currentState.intersects(checkCollide))
+          {
+            displayRed = true;
+            if (!cheat)
+              isDead = true;
+          }
+        }
+      }
+    }
+    
+    //collisions with horizontal ghosts
+    for (int i = 0; i < Gameplay.horiEnemies.length; i++)
+    {
+      checkCollide = new Rectangle(mapX + Gameplay.horiEnemies[i][2], Gameplay.horiEnemies[i][3], 48, 48);
+      if (currentState.intersects(checkCollide))
+      {
+        displayRed = true;
+        if (!cheat)
+          isDead = true;
+      }
+    }
+    
+    for (int i = 0; i < Gameplay.vertEnemies.length; i++)
+    {
+      checkCollide = new Rectangle(mapX + Gameplay.vertEnemies[i][2], Gameplay.vertEnemies[i][3], 48, 48);
+      if (currentState.intersects(checkCollide))
+      {
+        displayRed = true;
+        if (!cheat)
+          isDead = true;
+      }
+    }
+  }
+  
+  public void checkKey()
+  {
+    checkCollide = new Rectangle(mapX + Gameplay.items[0][0], Gameplay.items[0][1], 48,48);
+    if (currentState.intersects(checkCollide))
+      Gameplay.items[0][2] = 0;
+  }
+  public void checkBrief()
+  {
+    currentState = new Rectangle(Board.WIDTH / 2 - 16, louisY, 32, 32);
+    checkCollide = new Rectangle(mapX + Gameplay.items[1][0], Gameplay.items[1][1], 48,48);
+    if (currentState.intersects(checkCollide) && Gameplay.items[0][2] == 0)
+    {
+      Gameplay.items[1][2] = 0;
+      hasWon = true;
+    }
+  }
+  
+  
+  public void tick() 
+  {
+    
+    if (hasWonScreen)
+    {
+      try {
+        Thread.sleep(4000);
+      }
+      catch (Exception e){e.printStackTrace();}
+      hasWonScreen = false;
+      GameStateManager.currentState = 0;
+      LevelSelection.cheat = false;
+    }
+    else if (hasWon)
+    {
+      try {
+        Thread.sleep(250);
+      }
+      catch (Exception e){e.printStackTrace();}
+      hasWon = false;
+      hasWonScreen = true;
+    }
+    else if (isDeadScreen)
+    {
+      try {
+        Thread.sleep(2000);
+      }
+      catch (Exception e){e.printStackTrace();}
+      displayRed = false;
+      isDeadScreen = false;
+      isDead = false;
+      init(Gameplay.level);
+    }
+    else if (isDead)
+    {
+      try {
+        Thread.sleep(500);
+      }
+      catch (Exception e){e.printStackTrace();}
+      
+      isDeadScreen = true;
+    }
+    else
+    {
+      if (crouch && ySpeed == 0 && hSpeed == 0)
+      {
+        checkBrief();
+      }
+      else if (right)
+      {
+        moveR();
+        faceRight = true;
+      }
+      else if (left) 
+      {
+        moveL();
+        faceRight = false;
+      }
+      
+      
+      if (!left && !right)
+        friction();
+      
+      gravity();
+      
+      checkCol();
+      
+      mapX += hSpeed;
+      Gameplay.backX += hSpeed / 6;
+      louisY += ySpeed;
+      
+      checkDeath();      
+      checkKey();      
+    }
+  }
+  
+  public void draw(Graphics g) 
+  {
+    if (cheat)
+    {
+      
+      for (int i = 0; i < Gameplay.map.length; i++)
+      {
+        for (int j = Gameplay.markCollision - 1; j < Gameplay.markCollision + 2; j++)
+        {
+          if(Gameplay.map[i][j]==1 || Gameplay.map[i][j]==2)
+            g.fillRect(mapX + j * 48,i * 48-48,48,48);
+        }
+      }
+      
+      g.setColor(Color.RED);
+      g.fillRect(Board.WIDTH / 2 - 16 - hSpeed, louisY + ySpeed, 32,32); 
+    }
+    
+    if (displayRed)
+    {
+      toDisplay = dead;
+      if (cheat)
+        displayRed = false;
+    }
+    else
+    {
+      if (inAir)
+      {
+        if (faceRight)
+          toDisplay = jumpR;
+        else
+          toDisplay = jumpL;
+      }
+      else
+      {
+        if (crouch && ySpeed == 0 && hSpeed == 0)
+        {
+          if (faceRight)
+            toDisplay = crouchR;
+          else
+            toDisplay = crouchL;
+        }
+        else if (!left && !right)
+        {
+          if (faceRight)
+            toDisplay = standR;
+          else
+            toDisplay = standL;
+        }
+        else if ( Gameplay.animCount > 0)
+        {
+          if (right)
+            toDisplay = runR1;
+          else
+            toDisplay = runL1;
+        }
+        else
+        {
+          if (right)
+            toDisplay = runR2;
+          else
+            toDisplay = runL2;        
+        }
+      }
+    }
+    
+    g.drawImage(toDisplay,Board.WIDTH / 2 - 16, louisY, null);
+    
+    if (isDeadScreen)
+      g.drawImage(deathScreen, 0,0,null);
+    if (hasWonScreen)
+      g.drawImage(winScreen,0,0,null);
+  }
+  public void keyPressed(int k)
+  {
+    if (k == KeyEvent.VK_LEFT)
+      left = true;
+    if (k == KeyEvent.VK_RIGHT)
+      right = true;
+    if (k == KeyEvent.VK_DOWN)
+      crouch = true;
+    if (k == KeyEvent.VK_SPACE)
+    {
+      if (!inAir)
+        jump();
+    }
+  }
+  public void keyReleased(int k)
+  {
+    if (k == KeyEvent.VK_LEFT)
+      left = false;
+    if (k == KeyEvent.VK_RIGHT)
+      right = false;
+    if (k == KeyEvent.VK_DOWN)
+      crouch = false;
+  }
+  
+  
+  
+  private void loadImages(int level)
+  {
+    if (cheat)
+      preface = "cheat";
+    else if (level == 1)
+      preface = "purple";
+    else if (level == 2)
+      preface = "blue";
+    else if (level == 3)
+      preface = "green";
+    else 
+      preface = "orange";
+
+    try
+    {
+      winScreen = ImageIO.read(getClass().getResource("win-screen.png"));
+      deathScreen = ImageIO.read(getClass().getResource("death-screen.png"));
+      
+      //standing animation and horizontal flip
+      standL = ImageIO.read(getClass().getResource(preface +"-louis-stand.png"));
+      AffineTransform tx = AffineTransform.getScaleInstance(-1, 1); 
+      tx.translate(-standL.getWidth(null),0); 
+      AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_NEAREST_NEIGHBOR); 
+      standR = op.filter(standL, null);
+      
+      //jumping animation and horizontal flip
+      jumpL = ImageIO.read(getClass().getResource(preface + "-louis-jump.png"));      
+      jumpR = op.filter(jumpL, null);
+      
+      //first running frame and horizontal flip
+      runL1 = ImageIO.read(getClass().getResource(preface +"-louis-move1.png"));     
+      runR1 = op.filter(runL1, null);
+      
+      //second running frame and horizontal flip
+      runL2 = ImageIO.read(getClass().getResource(preface +"-louis-move2.png"));
+      runR2 = op.filter(runL2, null);
+      
+      //crouch animations and horizontal flip
+      crouchL = ImageIO.read(getClass().getResource(preface +"-louis-crouch.png"));
+      crouchR = op.filter(crouchL, null);
+      
+      //dead image
+      dead = ImageIO.read(getClass().getResource("louis-death.png"));
+    }
+    catch (Exception e){e.printStackTrace();} 
+  }
+  
+  public static void init(int level)
+  {
+    if (level == 1)
+    {
+      mapX = -96;
+      mapStart = mapX;
+      Gameplay.backX = Gameplay.backStart;
+      louisY = 288;
+    }
+    else if (level == 2)
+    {
+      mapX = -96;
+      mapStart = mapX;
+      Gameplay.backX = Gameplay.backStart;
+      louisY = 288;
+    }
+    else if (level == 3)
+    {
+      mapX = -240;
+      mapStart = mapX;
+      Gameplay.backX = Gameplay.backStart;
+      louisY = 144;
+    }
+    else if (level == 4)
+    {
+      mapX = -96;
+      mapStart = mapX;
+      Gameplay.backX = Gameplay.backStart;
+      louisY = 384;
+    }
+    Gameplay.items[0][2] = 1;
+    faceRight = true;
+    hSpeed = 0;
+    ySpeed = 0;
+    left = false;
+    right = false;
+    crouch = false;
+    isDead = false;
+    isDeadScreen = false;
+    displayRed = false;
+    hasWon = false;
+    hasWonScreen = false;
+  }
+  
+}

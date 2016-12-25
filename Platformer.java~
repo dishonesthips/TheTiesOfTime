@@ -1,0 +1,26 @@
+package game;
+
+import javax.swing.JFrame;
+
+/*
+ * This class creates the frame that the class GamePanel is then put onto.
+ */
+
+public class Platformer extends JFrame
+{
+    public Platformer()
+    {
+        add(new Board());
+        setTitle("The Ties of Time");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(Board.WIDTH, Board.HEIGHT);
+        setLocationRelativeTo(null);
+        setVisible(true);
+        setResizable(false);
+    }
+
+    public static void main(String[] args) 
+    {
+        new Platformer();
+    }
+}

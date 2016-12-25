@@ -1,0 +1,207 @@
+package game;
+
+import javax.swing.JPanel;
+import javax.imageio.*;
+import java.awt.image.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.awt.Graphics;
+import javax.swing.ImageIcon;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
+
+public class LevelOne
+{
+  private Louis louis;
+  private GameStateManager manage;
+  public static int markCollision=1;
+  public static int backX;
+  public static int backStart;
+  public static int animCount;
+  private BufferedImage slab, back, rock, spikeU, spikeD, ghostL1, ghostL2, ghostR1, ghostR2, key, briefcase;
+  public static int [][] horiEnemies;  //left lim, right lim, x, y, speed
+  public static int [][] vertEnemies;
+  public static int [][] items;  //x,y, 1 or 0
+  public static byte [][] map;
+  
+  public LevelOne(GameStateManager manage, int level, boolean cheat)
+  {
+    this.manage = manage;
+    
+    System.out.println("level one");
+    loadImages(level);
+    init(level);
+    louis = new Louis(cheat);
+  }
+  
+  public void tick() 
+  {
+    louis.tick();
+    if (animCount == 5)
+      animCount = -4;
+    else
+      animCount += 1;
+  }
+  
+  public void draw(Graphics g)
+  {
+    g.drawImage(back, backX , 0, null);
+    
+    for (int i = 0; i < map.length; i++)
+    {
+      for (int j = 0; j < map[0].length; j++)
+      {
+        if (map[i][j] == 1 || map[i][j] == 2)
+        {
+          if (louis.mapX+j*48 >= Board.WIDTH / 2 - 48 && louis.mapX+j*48 <= Board.WIDTH / 2)
+            markCollision = j;
+          if (map[i][j] == 1)
+            g.drawImage(rock,louis.mapX+j*48, i*48 - 48, null);
+          else
+            g.drawImage(slab,louis.mapX+j*48, i*48 - 48, null);
+        }
+        else if (map[i][j] == 3)
+          g.drawImage(spikeU,louis.mapX+j*48, i*48 - 48, null);
+        else if (map[i][j] == 4)
+          g.drawImage(spikeD,louis.mapX+j*48, i*48 - 48, null);
+        else if (map[i][j] == -1)
+        {
+          g.setColor(Color.BLACK);
+          g.fillRect(louis.mapX+j*48,i*48 - 48,48,48);
+        }
+      }
+    }
+    
+    for (int i = 0; i < horiEnemies.length; i++)
+    {//{up lim, down lim, current x, current y, speed}
+      if (horiEnemies[i][2] <= horiEnemies[i][0] || horiEnemies[i][2] >= horiEnemies[i][1])
+        horiEnemies[i][4] *= -1;
+      horiEnemies[i][2] += horiEnemies[i][4];
+      if (horiEnemies[i][4] > 0)
+      {
+        if (animCount > 0)
+          g.drawImage(ghostR1, Louis.mapX + horiEnemies[i][2], horiEnemies[i][3], null);
+        else
+          g.drawImage(ghostR2, Louis.mapX + horiEnemies[i][2], horiEnemies[i][3], null);
+      }
+      else
+      {
+        if (animCount > 0)
+          g.drawImage(ghostL1, Louis.mapX + horiEnemies[i][2], horiEnemies[i][3], null);
+        else
+          g.drawImage(ghostL2, Louis.mapX + horiEnemies[i][2], horiEnemies[i][3], null);
+      }
+    }
+    
+    for (int i = 0; i < vertEnemies.length; i++)
+    {//{up lim, down lim, current x, current y, speed}
+      if (vertEnemies[i][3] <= vertEnemies[i][0] || vertEnemies[i][3] >= vertEnemies[i][1])
+        vertEnemies[i][4] *= -1;
+      vertEnemies[i][3] += vertEnemies[i][4];
+      if (animCount > 0)
+        g.drawImage(ghostR1, Louis.mapX + vertEnemies[i][2], vertEnemies[i][3], null);
+      else
+        g.drawImage(ghostR2, Louis.mapX + vertEnemies[i][2], vertEnemies[i][3], null);
+    }
+    
+    
+    if (items[0][2] == 1)
+      g.drawImage(key, Louis.mapX + items[0][0], items[0][1], null);
+    else
+      g.drawImage(key, 912, -10, null);
+    if (items[1][2] == 1)
+      g.drawImage(briefcase, Louis.mapX + items[1][0], items[1][1], null);
+    
+    louis.draw(g);
+    
+    /*
+     g.setColor(Color.GREEN);
+     g.drawLine(0, Board.HEIGHT / 2, Board.WIDTH, Board.HEIGHT / 2);
+     g.drawLine(Board.WIDTH / 2, 0, Board.WIDTH / 2, Board.HEIGHT);
+     */
+  }
+  
+  public void keyPressed(int k) 
+  {
+    louis.keyPressed(k);
+    if (k == KeyEvent.VK_ESCAPE)
+    {
+      GameStateManager.currentState = 0;
+      LevelSelection.cheat = false;
+    }
+    
+  }
+  
+  public void keyReleased(int k) 
+  {
+    louis.keyReleased(k);
+  }
+  
+  
+  
+  private void loadImages(int level)
+  {
+    String preface;
+    if (level == 1)
+      preface = "purple";
+    else if (level == 2)
+      preface = "green";
+    else if (level == 3)
+      preface = "blue";
+    else 
+      preface = "orange";
+    
+    try
+    {
+      rock = ImageIO.read(getClass().getResource(preface + "-rock.png"));
+      slab = ImageIO.read(getClass().getResource(preface + "-slab.png"));
+      back = ImageIO.read(getClass().getResource(preface + "-back.png"));
+      spikeU= ImageIO.read(getClass().getResource(preface + "-spike.png"));
+      
+      AffineTransform vert = AffineTransform.getScaleInstance(1, -1); 
+      vert.translate(0, -spikeU.getWidth(null)); 
+      AffineTransformOp vFlip = new AffineTransformOp(vert, AffineTransformOp.TYPE_NEAREST_NEIGHBOR); 
+      spikeD = vFlip.filter(spikeU, null);
+      
+      key = ImageIO.read(getClass().getResource("big-key.png"));
+      briefcase = ImageIO.read(getClass().getResource("briefcase.png"));
+      
+      ghostR1 =ImageIO.read(getClass().getResource(preface + "-ghost1.png"));
+      
+      AffineTransform hori = AffineTransform.getScaleInstance(-1, 1); 
+      hori.translate(-ghostR1.getWidth(null),0); 
+      AffineTransformOp hFlip = new AffineTransformOp(hori, AffineTransformOp.TYPE_NEAREST_NEIGHBOR); 
+      ghostL1 = hFlip.filter(ghostR1, null);
+      
+      ghostR2 = ImageIO.read(getClass().getResource(preface + "-ghost2.png"));
+      ghostL2 = hFlip.filter(ghostR2, null);
+    }
+    catch (Exception e){e.printStackTrace();} 
+  }
+  private void init(int level)
+  {
+    backX = -10;
+    backStart = backX;
+    animCount = 0;
+    horiEnemies = new int[][]{{576, 768, 700, 48*8, -4}};
+    vertEnemies = new int[][]{{48, 192, 768+48, 80, -4}};
+    items = new int[][]{{576,48*8,1},{624,48*8,1}};
+    map = new byte[][] 
+    {{-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,3,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,2,2,0,0,0,0,1,0,0,0,0,0,4,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,2,2,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
+      {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}};
+  }
+}
+
+//500 x 100 title
